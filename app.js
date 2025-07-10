@@ -2,6 +2,7 @@ const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const loginBtn = document.getElementById('loginBtn');
+const usernameInput = document.getElementById('usernameInput');
 const scanBtn = document.getElementById('scanBtn');
 const messageSelect = document.getElementById('messageSelect');
 const customMessageInput = document.getElementById('customMessage');
@@ -47,23 +48,33 @@ if (username) {
   loginBtn.textContent = `Logged in as @${username}`;
   loginBtn.disabled = true;
   scanBtn.disabled = false;
+  if (usernameInput) {
+    usernameInput.value = username;
+    usernameInput.disabled = true;
+  }
 }
 
-// Login with Hive Keychain
+// Login with Hive Keychain (with username input)
 loginBtn.addEventListener('click', async () => {
+  const inputUsername = usernameInput.value.trim();
+  if (!inputUsername) {
+    statusDiv.textContent = 'Please enter your Hive username.';
+    return;
+  }
   keychain.requestHandshake(() => {
     keychain.requestSignBuffer(
-      null,
+      inputUsername,
       'paynsnap_login',
       'Posting',
       response => {
         if (response.success) {
-          username = response.data.username;
+          username = inputUsername;
           localStorage.setItem('hiveUsername', username);
           loginBtn.textContent = `Logged in as @${username}`;
           loginBtn.disabled = true;
           scanBtn.disabled = false;
           statusDiv.textContent = 'Login successful! Ready to scan QR code.';
+          usernameInput.disabled = true;
         } else {
           statusDiv.textContent = 'Login failed. Please try again.';
         }
