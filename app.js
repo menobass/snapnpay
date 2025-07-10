@@ -306,19 +306,24 @@ function handleQRCodeScanned(qrData) {
         return;
     }
 
-    // Optionally, validate amount format (e.g., "0.100 HBD")
-    let amountStr = qrData.amount;
-    if (typeof amountStr === 'number') {
-        // Convert to Hive string format
-        amountStr = amountStr.toFixed(3) + ' HBD';
-    }
-    // Accept only valid Hive amount strings
-    const amountPattern = /^\d+\.\d{3} HBD$/;
-    if (typeof amountStr !== 'string' || !amountPattern.test(amountStr)) {
-        showStatus('Invalid QR code: amount must be a string like "0.100 HBD"', 'error');
+
+    // Normalize and validate amount
+    let amountNum;
+    if (typeof qrData.amount === 'number') {
+        amountNum = qrData.amount;
+    } else if (typeof qrData.amount === 'string') {
+        // Remove any currency suffix and parse
+        amountNum = parseFloat(qrData.amount.replace(/\s*HBD$/i, ''));
+    } else {
+        showStatus('Invalid QR code: amount must be a number or string', 'error');
         return;
     }
-
+    if (isNaN(amountNum) || amountNum <= 0) {
+        showStatus('Invalid QR code: amount must be a positive number', 'error');
+        return;
+    }
+    // Store for UI as "0.000 HBD"
+    let amountStr = formatHiveAmount(amountNum) + ' HBD';
     paymentData = {
         to: qrData.to,
         amount: amountStr,
@@ -344,10 +349,17 @@ async function confirmPayment() {
     showLoading('Initiating payment...');
     
     try {
-        // Ensure amount is formatted as "0.000 HBD"
+        // Strip " HBD" and format to 3 decimals for Keychain
         let amountValue = paymentData.amount;
-        let amountNum = typeof amountValue === 'string' ? parseFloat(amountValue) : amountValue;
-        let formattedAmount = formatHiveAmount(amountNum) + ' HBD';
+        let amountNum = typeof amountValue === 'string' ? parseFloat(amountValue.replace(/\s*HBD$/i, '')) : amountValue;
+        if (isNaN(amountNum) || amountNum <= 0) {
+            showStatus('Invalid payment amount. Please scan a valid QR code.', 'error');
+            isProcessing = false;
+            document.getElementById('confirmPaymentBtn').disabled = false;
+            hideLoading();
+            return;
+        }
+        let formattedAmount = formatHiveAmount(amountNum); // No currency suffix
         window.hive_keychain.requestTransfer(
             currentUser,
             paymentData.to,
