@@ -262,7 +262,8 @@ function parseHiveOpQr(qrString) {
 function scanQRCode() {
     const video = document.getElementById('cameraStream');
     const canvas = document.getElementById('qrCanvas');
-    const context = canvas.getContext('2d');
+    // Use willReadFrequently for performance (browser warning)
+    const context = canvas.getContext('2d', { willReadFrequently: true });
 
     if (video.readyState === video.HAVE_ENOUGH_DATA) {
         canvas.width = video.videoWidth;
@@ -395,25 +396,34 @@ async function waitForPaymentConfirmation() {
     
     const checkPayment = async () => {
         try {
-            const client = new dhive.Client(config.hiveNodes || ['https://api.hive.blog']);
+            // Check for dhive availability
+            const dhiveLib = window.dhive || (typeof dhive !== 'undefined' ? dhive : null);
+            if (!dhiveLib) {
+                showStatus('Payment confirmation failed: Hive library (dhive) is not loaded. Please check your internet connection or reload the page.', 'error');
+                hideLoading();
+                isProcessing = false;
+                document.getElementById('confirmPaymentBtn').disabled = false;
+                return;
+            }
+            const client = new dhiveLib.Client(config.hiveNodes || ['https://api.hive.blog']);
             const history = await client.database.getAccountHistory(currentUser, -1, 50);
-            
             // Look for recent transfer
             const recentTransfer = history.find(([, op]) => {
+                // Compare amount as number, strip ' HBD' if present
+                let paidAmount = parseFloat(op[1].amount.split(' ')[0]);
+                let expectedAmount = typeof paymentData.amount === 'string' ? parseFloat(paymentData.amount.replace(/\s*HBD$/i, '')) : paymentData.amount;
                 return op[0] === 'transfer' && 
                        op[1].from === currentUser && 
                        op[1].to === paymentData.to && 
-                       parseFloat(op[1].amount.split(' ')[0]) === paymentData.amount &&
+                       paidAmount === expectedAmount &&
                        op[1].amount.includes('HBD');
             });
-            
             if (recentTransfer) {
                 hideLoading();
                 showStatus('Payment confirmed! Preparing to post snap...', 'success');
                 document.getElementById('snapSection').style.display = 'block';
                 return;
             }
-            
             attempts++;
             if (attempts >= maxAttempts) {
                 hideLoading();
@@ -422,9 +432,7 @@ async function waitForPaymentConfirmation() {
                 showStatus('Payment confirmation timeout. Please check your transaction history.', 'warning');
                 return;
             }
-            
             setTimeout(checkPayment, interval);
-            
         } catch (error) {
             console.error('Error checking payment:', error);
             attempts++;
