@@ -25,7 +25,32 @@ function initializeApp() {
   const customMessageInput = document.getElementById('customMessage');
   const statusDiv = document.getElementById('status');
   const hiveClient = new window.dhive.Client(['https://api.hive.blog', 'https://api.deathwing.me']);
-  const keychain = new window.hiveKeychain.HiveKeychainSdk();
+
+  // Use the browser extension's native API directly
+  function isKeychainAvailable() {
+    return typeof window.hive_keychain !== 'undefined';
+  }
+
+  function keychainLogin(username, onSuccess, onError) {
+    if (!isKeychainAvailable()) {
+      statusDiv.textContent = 'Hive Keychain extension not detected.';
+      if (onError) onError('not_detected');
+      return;
+    }
+    window.hive_keychain.requestSignBuffer(
+      username,
+      'paynsnap_login',
+      'Posting',
+      response => {
+        if (response.success) {
+          onSuccess(response);
+        } else {
+          statusDiv.textContent = 'Login failed. Please try again.';
+          if (onError) onError(response.message);
+        }
+      }
+    );
+  }
 
 
 
@@ -67,28 +92,18 @@ function initializeApp() {
       statusDiv.textContent = 'Please enter your Hive username.';
       return;
     }
-    keychain.requestHandshake(() => {
-      keychain.requestSignBuffer(
-        inputUsername,
-        'paynsnap_login',
-        'Posting',
-        response => {
-          if (response.success) {
-            username = inputUsername;
-            localStorage.setItem('hiveUsername', username);
-            loginBtn.textContent = `Logged in as @${username}`;
-            loginBtn.disabled = true;
-            scanBtn.disabled = false;
-            statusDiv.textContent = 'Login successful! Ready to scan QR code.';
-            usernameInput.disabled = true;
-          } else {
-            statusDiv.textContent = 'Login failed. Please try again.';
-          }
-        },
-        null,
-        'Pay n Snap Login'
-      );
-    });
+    keychainLogin(
+      inputUsername,
+      () => {
+        username = inputUsername;
+        localStorage.setItem('hiveUsername', username);
+        loginBtn.textContent = `Logged in as @${username}`;
+        loginBtn.disabled = true;
+        scanBtn.disabled = false;
+        statusDiv.textContent = 'Login successful! Ready to scan QR code.';
+        usernameInput.disabled = true;
+      }
+    );
   });
 
   // Handle message selection
