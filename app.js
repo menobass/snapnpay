@@ -342,7 +342,7 @@ async function confirmPayment() {
         window.hive_keychain.requestTransfer(
             currentUser,
             paymentData.to,
-            paymentData.amount.toString(),
+            paymentData.amount, // Pass as string, do not use .toString()
             paymentData.memo,
             'HBD',
             (response) => {
