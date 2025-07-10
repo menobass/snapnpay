@@ -1,3 +1,9 @@
+// Format amount to Hive 3-decimal string (e.g., "1.000")
+function formatHiveAmount(amount) {
+    // Accepts number or string (with or without currency)
+    let num = typeof amount === 'string' ? parseFloat(amount) : amount;
+    return num.toFixed(3);
+}
 // App configuration and state
 let config = {};
 let currentUser = null;
@@ -338,11 +344,14 @@ async function confirmPayment() {
     showLoading('Initiating payment...');
     
     try {
-        // Request transfer through Keychain
+        // Ensure amount is formatted as "0.000 HBD"
+        let amountValue = paymentData.amount;
+        let amountNum = typeof amountValue === 'string' ? parseFloat(amountValue) : amountValue;
+        let formattedAmount = formatHiveAmount(amountNum) + ' HBD';
         window.hive_keychain.requestTransfer(
             currentUser,
             paymentData.to,
-            paymentData.amount, // Pass as string, do not use .toString()
+            formattedAmount,
             paymentData.memo,
             'HBD',
             (response) => {
