@@ -1,3 +1,0 @@
-<!-- Use this file to provide workspace-specific custom instructions to Copilot. For more details, visit https://code.visualstudio.com/docs/copilot/copilot-customization#_use-a-githubcopilotinstructionsmd-file -->
-
-This project is a static JavaScript web app for the Hive blockchain, designed for GitHub Pages. It integrates with Hive Keychain for authentication and payments, and is styled like classic Twitter. The app is highly configurable via config.json and is intended for quick, user-friendly HBD transactions and posting replies (snaps) to Hive posts. All logic is client-side and no backend is required.
