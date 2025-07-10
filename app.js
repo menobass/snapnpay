@@ -1,14 +1,48 @@
-const video = document.getElementById('video');
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-const loginBtn = document.getElementById('loginBtn');
-const usernameInput = document.getElementById('usernameInput');
-const scanBtn = document.getElementById('scanBtn');
-const messageSelect = document.getElementById('messageSelect');
-const customMessageInput = document.getElementById('customMessage');
-const statusDiv = document.getElementById('status');
-const hiveClient = new window.dhive.Client(['https://api.hive.blog', 'https://api.deathwing.me']);
-const keychain = new window.hiveKeychain.HiveKeychainSdk();
+
+window.addEventListener('DOMContentLoaded', () => {
+  function waitForDhive(retries = 10) {
+    if (window.dhive) {
+      initializeApp();
+    } else if (retries > 0) {
+      setTimeout(() => waitForDhive(retries - 1), 200);
+    } else {
+      const statusDiv = document.getElementById('status');
+      if (statusDiv) statusDiv.textContent = 'Error: Hive library (dhive) failed to load.';
+    }
+  }
+  waitForDhive();
+});
+
+function initializeApp() {
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const loginBtn = document.getElementById('loginBtn');
+  const usernameInput = document.getElementById('usernameInput');
+  const scanBtn = document.getElementById('scanBtn');
+  const messageSelect = document.getElementById('messageSelect');
+  const customMessageInput = document.getElementById('customMessage');
+  const statusDiv = document.getElementById('status');
+  const hiveClient = new window.dhive.Client(['https://api.hive.blog', 'https://api.deathwing.me']);
+  const keychain = new window.hiveKeychain.HiveKeychainSdk();
+
+  // ...existing code from here down, but indented inside this function...
+
+// Default config (overridden by config.json)
+let config = {
+  community: 'hive-124838',
+  targetAccount: 'peak.snaps',
+  beneficiaries: [{ account: 'snapnpay', percentage: 10 }],
+  messages: [
+    'I just quickly snaped and paid {amount} at {account} today.',
+    'I just paid {amount} at {account}.',
+    'I just bought from {account} using Pay Snaps with {amount}.'
+  ],
+  defaultMessageIndex: 0
+};
+
+// ...rest of your code remains unchanged, but must be inside initializeApp()...
+}
 
 // Default config (overridden by config.json)
 let config = {
