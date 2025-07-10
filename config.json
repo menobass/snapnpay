@@ -4,8 +4,8 @@
     "https://hived.privex.io",
     "https://rpc.ausbit.dev"
   ],
-  "targetAccount": "payandsnap",
-  "communityTag": "payandsnap",
+  "targetAccount": "peak.snaps",
+  "communityTag": "hive-124838",
   "messages": [
     "Thanks for the payment! 💰 {amount} HBD received from @{from}",
     "Payment confirmed! {amount} HBD transferred to @{account} 🎉",
@@ -15,7 +15,7 @@
   ],
   "beneficiaries": [
     {
-      "account": "payandsnap",
+      "account": "snapnpay",
       "weight": 500
     }
   ],
