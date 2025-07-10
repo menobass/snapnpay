@@ -1,16 +1,17 @@
 
+
 window.addEventListener('DOMContentLoaded', () => {
-  function waitForDhive(retries = 10) {
-    if (window.dhive) {
+  function waitForLibs(retries = 20) {
+    if (window.dhive && window.hiveKeychain) {
       initializeApp();
     } else if (retries > 0) {
-      setTimeout(() => waitForDhive(retries - 1), 200);
+      setTimeout(() => waitForLibs(retries - 1), 200);
     } else {
       const statusDiv = document.getElementById('status');
-      if (statusDiv) statusDiv.textContent = 'Error: Hive library (dhive) failed to load.';
+      if (statusDiv) statusDiv.textContent = 'Error: Required libraries (dhive or Hive Keychain SDK) failed to load.';
     }
   }
-  waitForDhive();
+  waitForLibs();
 });
 
 function initializeApp() {
@@ -26,25 +27,7 @@ function initializeApp() {
   const hiveClient = new window.dhive.Client(['https://api.hive.blog', 'https://api.deathwing.me']);
   const keychain = new window.hiveKeychain.HiveKeychainSdk();
 
-  // ...existing code from here down, but indented inside this function...
 
-
-// ...rest of your code remains unchanged, but must be inside initializeApp()...
-// (Removed duplicate config and closing brace)
-
-
-  // Default config (overridden by config.json)
-  let config = {
-    community: 'hive-124838',
-    targetAccount: 'peak.snaps',
-    beneficiaries: [{ account: 'snapnpay', percentage: 10 }],
-    messages: [
-      'I just quickly snaped and paid {amount} at {account} today.',
-      'I just paid {amount} at {account}.',
-      'I just bought from {account} using Pay Snaps with {amount}.'
-    ],
-    defaultMessageIndex: 0
-  };
 
   // Load config and settings
   async function loadConfig() {
