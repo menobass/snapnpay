@@ -7,7 +7,7 @@
   "targetAccount": "peak.snaps",
   "communityTag": "hive-124838",
   "messages": [
-    "Thanks for the payment! 💰 {amount} HBD received from @{from}",
+    "Thanks for the payment option! 💰 {amount} HBD sent.",
     "Payment confirmed! {amount} HBD transferred to @{account} 🎉",
     "Just made a quick payment of {amount} HBD via Pay n Snap! 🚀",
     "Seamless payment experience with {amount} HBD to @{account} ⚡",
