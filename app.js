@@ -26,6 +26,63 @@ function initializeApp() {
   const statusDiv = document.getElementById('status');
   const hiveClient = new window.dhive.Client(['https://api.hive.blog', 'https://api.deathwing.me']);
 
+  // Use the browser extension's native API directly for all Keychain actions
+  function isKeychainAvailable() {
+    return typeof window.hive_keychain !== 'undefined';
+  }
+
+  function keychainTransfer(username, to, amount, memo, onSuccess, onError) {
+    if (!isKeychainAvailable()) {
+      statusDiv.textContent = 'Hive Keychain extension not detected.';
+      if (onError) onError('not_detected');
+      return;
+    }
+    window.hive_keychain.requestTransfer(
+      username,
+      to,
+      amount,
+      memo,
+      'HBD',
+      response => {
+        if (response.success) {
+          onSuccess(response);
+        } else {
+          statusDiv.textContent = 'Transfer failed: ' + response.message;
+          if (onError) onError(response.message);
+        }
+      },
+      false
+    );
+  }
+
+  function keychainPost(username, parentAuthor, parentPermlink, commentPermlink, message, beneficiaries, onSuccess, onError) {
+    if (!isKeychainAvailable()) {
+      statusDiv.textContent = 'Hive Keychain extension not detected.';
+      if (onError) onError('not_detected');
+      return;
+    }
+    window.hive_keychain.requestPost(
+      username,
+      '',
+      message,
+      parentPermlink,
+      commentPermlink,
+      parentAuthor,
+      JSON.stringify({ app: 'paynsnap/1.0', beneficiaries }),
+      null,
+      response => {
+        if (response.success) {
+          onSuccess(response);
+        } else {
+          statusDiv.textContent = 'Payment has been confirmed but the snap didn’t happen.';
+          if (onError) onError(response.message);
+        }
+        scanBtn.disabled = false;
+      },
+      false
+    );
+  }
+
   // Use the browser extension's native API directly
   function isKeychainAvailable() {
     return typeof window.hive_keychain !== 'undefined';
@@ -175,23 +232,19 @@ function initializeApp() {
       }
       statusDiv.textContent = `Initiating transfer of ${amount} to @${to}...`;
 
-      // Send HBD transfer
-      keychain.requestTransfer(
+      // Send HBD transfer using Keychain extension API
+      keychainTransfer(
         username,
         to,
         amount,
         memo,
-        'HBD',
-        response => {
-          if (response.success) {
-            statusDiv.textContent = 'Transfer initiated. Waiting for confirmation...';
-            waitForConfirmation(to, amount, memo);
-          } else {
-            statusDiv.textContent = 'Transfer failed: ' + response.message;
-            scanBtn.disabled = false;
-          }
+        () => {
+          statusDiv.textContent = 'Transfer initiated. Waiting for confirmation...';
+          waitForConfirmation(to, amount, memo);
         },
-        false
+        () => {
+          scanBtn.disabled = false;
+        }
       );
     } catch (err) {
       statusDiv.textContent = 'Error processing QR code: ' + err.message;
@@ -266,24 +319,19 @@ function initializeApp() {
         })
       };
 
-      keychain.requestPost(
+      keychainPost(
         username,
-        '',
-        message,
+        author,
         parentPermlink,
         commentPermlink,
-        author,
-        JSON.stringify({ app: 'paynsnap/1.0', beneficiaries }),
-        null,
-        response => {
-          if (response.success) {
-            statusDiv.textContent = 'Snap posted successfully!';
-          } else {
-            statusDiv.textContent = 'Payment has been confirmed but the snap didn’t happen.';
-          }
-          scanBtn.disabled = false;
+        message,
+        beneficiaries,
+        () => {
+          statusDiv.textContent = 'Snap posted successfully!';
         },
-        false
+        () => {
+          // Error message is set in keychainPost
+        }
       );
     } catch (err) {
       statusDiv.textContent = 'Payment has been confirmed but the snap didn’t happen: ' + err.message;
