@@ -7,7 +7,7 @@ const scanBtn = document.getElementById('scanBtn');
 const messageSelect = document.getElementById('messageSelect');
 const customMessageInput = document.getElementById('customMessage');
 const statusDiv = document.getElementById('status');
-const hiveClient = new dhive.Client(['https://api.hive.blog', 'https://api.deathwing.me']);
+const hiveClient = new window.dhive.Client(['https://api.hive.blog', 'https://api.deathwing.me']);
 const keychain = new window.hiveKeychain.HiveKeychainSdk();
 
 // Default config (overridden by config.json)
