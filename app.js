@@ -15,6 +15,8 @@ let isProcessing = false;
 // Initialize the application
 document.addEventListener('DOMContentLoaded', async function() {
     await loadConfig();
+    // Debug: check if dhive is available
+    console.log('dhive available:', typeof dhive !== 'undefined');
     initializeUI();
     checkExistingSession();
     populateMessageOptions();
