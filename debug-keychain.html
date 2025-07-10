@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Keychain Debug</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .debug-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #007bff;
+        }
+        .error { border-left-color: #dc3545; }
+        .success { border-left-color: #28a745; }
+        .warning { border-left-color: #ffc107; }
+    </style>
+</head>
+<body>
+    <h1>Keychain Debug - Brave Browser</h1>
+    
+    <div id="results"></div>
+    
+    <button onclick="runTests()">Run Keychain Tests</button>
+    
+    <script>
+        function addResult(message, type = 'debug') {
+            const div = document.createElement('div');
+            div.className = `debug-box ${type}`;
+            div.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${message}`;
+            document.getElementById('results').appendChild(div);
+        }
+        
+        function runTests() {
+            document.getElementById('results').innerHTML = '';
+            
+            // Test 1: Check if window.hive_keychain exists
+            addResult(`Testing window.hive_keychain...`);
+            
+            if (typeof window.hive_keychain !== 'undefined') {
+                addResult(`✅ Keychain detected! Type: ${typeof window.hive_keychain}`, 'success');
+                
+                // Test 2: Check available methods
+                const methods = Object.keys(window.hive_keychain);
+                addResult(`Available methods: ${methods.join(', ')}`, 'success');
+                
+                // Test 3: Try to request account info
+                addResult(`Testing account validation...`);
+                
+                window.hive_keychain.requestSignBuffer('test', 'test message', 'Posting', function(response) {
+                    if (response.success) {
+                        addResult(`✅ Keychain is working properly!`, 'success');
+                    } else {
+                        addResult(`⚠️ Keychain responded but with error: ${response.message}`, 'warning');
+                    }
+                });
+                
+            } else {
+                addResult(`❌ Keychain not detected`, 'error');
+                addResult(`Browser: ${navigator.userAgent}`, 'debug');
+                addResult(`Extensions available: ${navigator.plugins.length} plugins`, 'debug');
+            }
+            
+            // Test 4: Check if it's Brave specific
+            addResult(`User Agent: ${navigator.userAgent}`, 'debug');
+            addResult(`Is Brave?: ${navigator.brave ? 'Yes' : 'No'}`, 'debug');
+        }
+        
+        // Auto-run on load
+        window.addEventListener('load', runTests);
+    </script>
+</body>
+</html>
