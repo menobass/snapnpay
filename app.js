@@ -223,31 +223,69 @@ function stopQRScanning() {
 }
 
 // QR code scanning function
+function parseHiveOpQr(qrString) {
+    // 1. Validate URI format
+    const prefix = "hive://sign/op/";
+    if (!qrString.startsWith(prefix)) {
+        throw new Error("Invalid QR code: not a Hive op URI");
+    }
+    // 2. Extract base64url payload
+    const base64url = qrString.slice(prefix.length);
+    // 3. Convert base64url to base64
+    let base64 = base64url.replace(/-/g, "+").replace(/_/g, "/");
+    while (base64.length % 4) base64 += "=";
+    // 4. Decode and parse JSON
+    let op;
+    try {
+        const json = atob(base64);
+        op = JSON.parse(json);
+    } catch (e) {
+        throw new Error("Invalid QR code: cannot decode or parse payload");
+    }
+    // 5. Validate op structure
+    if (!Array.isArray(op) || op[0] !== "transfer" || typeof op[1] !== "object") {
+        throw new Error("Invalid QR code: not a transfer operation");
+    }
+    const { to, amount, memo } = op[1];
+    if (!to || !amount) {
+        throw new Error("Invalid QR code: missing required fields");
+    }
+    return { to, amount, memo: memo || "" };
+}
+
 function scanQRCode() {
     const video = document.getElementById('cameraStream');
     const canvas = document.getElementById('qrCanvas');
     const context = canvas.getContext('2d');
-    
+
     if (video.readyState === video.HAVE_ENOUGH_DATA) {
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
+
         const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
         const qrCode = jsQR(imageData.data, imageData.width, imageData.height);
-        
+
         if (qrCode) {
             try {
-                const qrData = JSON.parse(qrCode.data);
-                handleQRCodeScanned(qrData);
+                // Try to parse as Hive op QR (hive://sign/op/{base64url})
+                const payment = parseHiveOpQr(qrCode.data);
+                handleQRCodeScanned(payment);
                 return;
-            } catch (error) {
-                console.error('Invalid QR code format:', error);
-                showStatus('Invalid QR code format. Expected JSON with payment data.', 'error');
+            } catch (err) {
+                // If not a Hive op QR, try legacy JSON (for backward compatibility)
+                try {
+                    const qrData = JSON.parse(qrCode.data);
+                    handleQRCodeScanned(qrData);
+                    return;
+                } catch (error) {
+                    console.error('Invalid QR code format:', error);
+                    showStatus('Invalid QR code format. Expected Hive op QR or JSON with payment data.', 'error');
+                }
             }
         }
     }
-    
+
     // Continue scanning
     scanningInterval = requestAnimationFrame(scanQRCode);
 }
