@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' data: https:; connect-src 'self' https: wss:; media-src 'self' https:;">
+    <title>Pay n Snap - Hive Blockchain Payment & Social</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="logo">
+                    <i class="fas fa-bolt"></i>
+                    Pay n Snap
+                </h1>
+                <div class="user-info" id="userInfo" style="display: none;">
+                    <img id="userAvatar" class="user-avatar" src="" alt="User Avatar">
+                    <span id="username" class="username"></span>
+                    <button id="logoutBtn" class="btn btn-outline">
+                        <i class="fas fa-sign-out-alt"></i>
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Login Section -->
+            <section id="loginSection" class="section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>
+                            <i class="fas fa-key"></i>
+                            Login with Hive Keychain
+                        </h2>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">Enter your Hive username to get started</p>
+                        <div class="form-group">
+                            <input type="text" id="usernameInput" class="form-control" placeholder="Enter Hive username" autocomplete="username">
+                        </div>
+                        <button id="loginBtn" class="btn btn-primary">
+                            <i class="fas fa-sign-in-alt"></i>
+                            Login
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Payment Section -->
+            <section id="paymentSection" class="section" style="display: none;">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>
+                            <i class="fas fa-qrcode"></i>
+                            Scan QR Code to Pay
+                        </h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="payment-controls">
+                            <button id="scanQRBtn" class="btn btn-primary">
+                                <i class="fas fa-camera"></i>
+                                Scan QR Code
+                            </button>
+                            <button id="stopScanBtn" class="btn btn-secondary" style="display: none;">
+                                <i class="fas fa-stop"></i>
+                                Stop Scanning
+                            </button>
+                        </div>
+                        
+                        <!-- Camera View -->
+                        <div id="cameraContainer" class="camera-container" style="display: none;">
+                            <video id="cameraStream" class="camera-stream" playsinline></video>
+                            <canvas id="qrCanvas" class="qr-canvas"></canvas>
+                        </div>
+
+                        <!-- Payment Details -->
+                        <div id="paymentDetails" class="payment-details" style="display: none;">
+                            <h3>Payment Details</h3>
+                            <div class="payment-info">
+                                <div class="info-item">
+                                    <label>To:</label>
+                                    <span id="paymentTo"></span>
+                                </div>
+                                <div class="info-item">
+                                    <label>Amount:</label>
+                                    <span id="paymentAmount"></span> HBD
+                                </div>
+                                <div class="info-item">
+                                    <label>Memo:</label>
+                                    <span id="paymentMemo"></span>
+                                </div>
+                            </div>
+                            <button id="confirmPaymentBtn" class="btn btn-success">
+                                <i class="fas fa-check"></i>
+                                Confirm Payment
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Snap Message Section -->
+            <section id="snapSection" class="section" style="display: none;">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>
+                            <i class="fas fa-comment"></i>
+                            Snap Message
+                        </h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label for="messageSelect">Choose a message:</label>
+                            <select id="messageSelect" class="form-control">
+                                <option value="">Select a predefined message...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="customMessage">Or enter custom message:</label>
+                            <textarea id="customMessage" class="form-control" rows="3" placeholder="Enter your custom message..."></textarea>
+                        </div>
+                        <button id="postSnapBtn" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i>
+                            Post Snap
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Status Section -->
+            <section id="statusSection" class="section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>
+                            <i class="fas fa-info-circle"></i>
+                            Status
+                        </h2>
+                    </div>
+                    <div class="card-body">
+                        <div id="statusContent" class="status-content">
+                            <p class="text-muted">Ready to start...</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>&copy; 2025 Pay n Snap. Built for Hive Blockchain.</p>
+        </footer>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p id="loadingText">Loading...</p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/dhive@0.21.0/dist/dhive.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

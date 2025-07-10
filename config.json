@@ -1,0 +1,27 @@
+{
+  "hiveNodes": [
+    "https://api.hive.blog",
+    "https://hived.privex.io",
+    "https://rpc.ausbit.dev"
+  ],
+  "targetAccount": "payandsnap",
+  "communityTag": "payandsnap",
+  "messages": [
+    "Thanks for the payment! 💰 {amount} HBD received from @{from}",
+    "Payment confirmed! {amount} HBD transferred to @{account} 🎉",
+    "Just made a quick payment of {amount} HBD via Pay n Snap! 🚀",
+    "Seamless payment experience with {amount} HBD to @{account} ⚡",
+    "Pay n Snap makes crypto payments so easy! {amount} HBD sent 💸"
+  ],
+  "beneficiaries": [
+    {
+      "account": "payandsnap",
+      "weight": 500
+    }
+  ],
+  "app": {
+    "name": "Pay n Snap",
+    "version": "1.0.0",
+    "description": "Hive Blockchain Payment & Social App"
+  }
+}
