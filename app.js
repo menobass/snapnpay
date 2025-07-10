@@ -294,24 +294,37 @@ function scanQRCode() {
 function handleQRCodeScanned(qrData) {
     stopQRScanning();
     
-    // Validate QR data
-    if (!qrData.to || !qrData.amount || typeof qrData.amount !== 'number') {
+    // Validate QR data (amount can be a string like "0.100 HBD")
+    if (!qrData.to || !qrData.amount) {
         showStatus('Invalid QR code: missing required fields (to, amount)', 'error');
         return;
     }
-    
+
+    // Optionally, validate amount format (e.g., "0.100 HBD")
+    let amountStr = qrData.amount;
+    if (typeof amountStr === 'number') {
+        // Convert to Hive string format
+        amountStr = amountStr.toFixed(3) + ' HBD';
+    }
+    // Accept only valid Hive amount strings
+    const amountPattern = /^\d+\.\d{3} HBD$/;
+    if (typeof amountStr !== 'string' || !amountPattern.test(amountStr)) {
+        showStatus('Invalid QR code: amount must be a string like "0.100 HBD"', 'error');
+        return;
+    }
+
     paymentData = {
         to: qrData.to,
-        amount: qrData.amount,
+        amount: amountStr,
         memo: qrData.memo || 'Payment via Pay n Snap'
     };
-    
+
     // Display payment details
     document.getElementById('paymentTo').textContent = paymentData.to;
     document.getElementById('paymentAmount').textContent = paymentData.amount;
     document.getElementById('paymentMemo').textContent = paymentData.memo;
     document.getElementById('paymentDetails').style.display = 'block';
-    
+
     showStatus('QR code scanned successfully. Review payment details and confirm.', 'success');
 }
 
