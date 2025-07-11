@@ -392,64 +392,59 @@ async function confirmPayment() {
 
 // Wait for payment confirmation
 async function waitForPaymentConfirmation() {
-    const maxAttempts = 10;
-    const interval = 1000; // 1 second
+    // Use direct Hive API polling for payment confirmation (POS logic)
+    const maxAttempts = 100;
+    const interval = 3000; // 3 seconds
     let attempts = 0;
-    
-    const checkPayment = async () => {
+    let confirmed = false;
+    const toAccount = paymentData.to;
+    const expectedAmount = typeof paymentData.amount === 'string' ? paymentData.amount : formatHiveAmount(paymentData.amount) + ' HBD';
+    const expectedMemo = paymentData.memo;
+    async function pollPayment() {
+        attempts++;
         try {
-            // Check for dhive availability
-            const dhiveLib = window.dhive || (typeof dhive !== 'undefined' ? dhive : null);
-            if (!dhiveLib) {
-                showStatus('Payment confirmation failed: Hive library (dhive) is not loaded. Please check your internet connection or reload the page.', 'error');
-                hideLoading();
-                isProcessing = false;
-                document.getElementById('confirmPaymentBtn').disabled = false;
-                return;
-            }
-            const client = new dhiveLib.Client(config.hiveNodes || ['https://api.hive.blog']);
-            const history = await client.database.getAccountHistory(currentUser, -1, 50);
-            // Look for recent transfer
-            const recentTransfer = history.find(([, op]) => {
-                // Compare amount as number, strip ' HBD' if present
-                let paidAmount = parseFloat(op[1].amount.split(' ')[0]);
-                let expectedAmount = typeof paymentData.amount === 'string' ? parseFloat(paymentData.amount.replace(/\s*HBD$/i, '')) : paymentData.amount;
-                return op[0] === 'transfer' && 
-                       op[1].from === currentUser && 
-                       op[1].to === paymentData.to && 
-                       paidAmount === expectedAmount &&
-                       op[1].amount.includes('HBD');
+            const response = await fetch('https://api.hive.blog', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    jsonrpc: '2.0',
+                    method: 'condenser_api.get_account_history',
+                    params: [currentUser, -1, 20],
+                    id: 1
+                })
             });
-            if (recentTransfer) {
+            const data = await response.json();
+            const history = data.result;
+            for (let i = history.length - 1; i >= 0; i--) {
+                const op = history[i][1].op;
+                if (op[0] === 'transfer' &&
+                    op[1].from === currentUser &&
+                    op[1].to === toAccount &&
+                    op[1].amount === expectedAmount &&
+                    op[1].memo === expectedMemo) {
+                    confirmed = true;
+                    break;
+                }
+            }
+            if (confirmed) {
                 hideLoading();
                 showStatus('Payment confirmed! Preparing to post snap...', 'success');
                 document.getElementById('snapSection').style.display = 'block';
                 return;
             }
-            attempts++;
-            if (attempts >= maxAttempts) {
-                hideLoading();
-                isProcessing = false;
-                document.getElementById('confirmPaymentBtn').disabled = false;
-                showStatus('Payment confirmation timeout. Please check your transaction history.', 'warning');
-                return;
-            }
-            setTimeout(checkPayment, interval);
-        } catch (error) {
-            console.error('Error checking payment:', error);
-            attempts++;
-            if (attempts >= maxAttempts) {
-                hideLoading();
-                isProcessing = false;
-                document.getElementById('confirmPaymentBtn').disabled = false;
-                showStatus('Error confirming payment. Please check your transaction history.', 'error');
-                return;
-            }
-            setTimeout(checkPayment, interval);
+        } catch (e) {
+            console.error('Error checking payment:', e);
         }
-    };
-    
-    checkPayment();
+        if (attempts >= maxAttempts) {
+            hideLoading();
+            isProcessing = false;
+            document.getElementById('confirmPaymentBtn').disabled = false;
+            showStatus('Payment confirmation timeout. Please check your transaction history.', 'warning');
+            return;
+        }
+        setTimeout(pollPayment, interval);
+    }
+    pollPayment();
 }
 
 // Handle message selection
