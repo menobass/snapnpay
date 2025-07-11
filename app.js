@@ -459,21 +459,22 @@ function handleMessageSelect() {
 
 // Post snap (reply)
 async function postSnap() {
-    if (isProcessing) return;
-    
-    const messageSelect = document.getElementById('messageSelect');
-    const customMessage = document.getElementById('customMessage');
-    
-    let message = customMessage.value.trim() || messageSelect.value;
-    
-    if (!message) {
-        showStatus('Please select or enter a message for your snap.', 'error');
+    console.log('[DEBUG] postSnap called');
+    if (isProcessing) {
+        console.log('[DEBUG] postSnap aborted: isProcessing is true');
         return;
     }
-    
+    const messageSelect = document.getElementById('messageSelect');
+    const customMessage = document.getElementById('customMessage');
+    let message = customMessage.value.trim() || messageSelect.value;
+    console.log('[DEBUG] Selected message:', message);
+    if (!message) {
+        showStatus('Please select or enter a message for your snap.', 'error');
+        console.log('[DEBUG] postSnap aborted: no message selected');
+        return;
+    }
     isProcessing = true;
     document.getElementById('postSnapBtn').disabled = true;
-    
     showLoading('Posting snap...');
     
     try {
@@ -481,23 +482,26 @@ async function postSnap() {
         message = message.replace('{amount}', paymentData.amount);
         message = message.replace('{account}', paymentData.to);
         message = message.replace('{from}', currentUser);
+        console.log('[DEBUG] Message after placeholder replacement:', message);
         
         // Get target account's latest post
+        console.log('[DEBUG] Fetching latest post for account:', paymentData.to);
         const client = new dhive.Client(config.hiveNodes || ['https://api.hive.blog']);
         const discussions = await client.database.getDiscussions('blog', {
             tag: paymentData.to,
             limit: 1
         });
-        
+        console.log('[DEBUG] Fetched discussions:', discussions);
         if (discussions.length === 0) {
             hideLoading();
             isProcessing = false;
             document.getElementById('postSnapBtn').disabled = false;
             showStatus('No posts found for target account.', 'error');
+            console.log('[DEBUG] postSnap aborted: no posts found for target account');
             return;
         }
-        
         const targetPost = discussions[0];
+        console.log('[DEBUG] Target post:', targetPost);
         
         // Create comment data
         const commentData = {
@@ -533,6 +537,7 @@ async function postSnap() {
         }
         
         // Post comment through Keychain
+        console.log('[DEBUG] Sending post via Hive Keychain:', commentData);
         window.hive_keychain.requestPost(
             currentUser,
             commentData.title,
@@ -543,10 +548,10 @@ async function postSnap() {
             commentData.permlink,
             '',
             (response) => {
+                console.log('[DEBUG] Keychain post response:', response);
                 hideLoading();
                 isProcessing = false;
                 document.getElementById('postSnapBtn').disabled = false;
-                
                 if (response.success) {
                     showStatus('Snap posted successfully!', 'success');
                     // Reset the form
