@@ -430,6 +430,8 @@ async function waitForPaymentConfirmation() {
                 hideLoading();
                 showStatus('Payment confirmed! Preparing to post snap...', 'success');
                 document.getElementById('snapSection').style.display = 'block';
+                isProcessing = false;
+                document.getElementById('postSnapBtn').disabled = false;
                 return;
             }
         } catch (e) {
@@ -459,54 +461,30 @@ function handleMessageSelect() {
 
 // Post snap (reply)
 async function postSnap() {
-    console.log('[DEBUG] postSnap called');
     if (isProcessing) {
-        console.log('[DEBUG] postSnap aborted: isProcessing is true');
         return;
     }
     const messageSelect = document.getElementById('messageSelect');
     const customMessage = document.getElementById('customMessage');
     let message = customMessage.value.trim() || messageSelect.value;
-    console.log('[DEBUG] Selected message:', message);
     if (!message) {
         showStatus('Please select or enter a message for your snap.', 'error');
-        console.log('[DEBUG] postSnap aborted: no message selected');
         return;
     }
     isProcessing = true;
     document.getElementById('postSnapBtn').disabled = true;
     showLoading('Posting snap...');
-    
+
     try {
         // Replace placeholders in message
         message = message.replace('{amount}', paymentData.amount);
         message = message.replace('{account}', paymentData.to);
         message = message.replace('{from}', currentUser);
-        console.log('[DEBUG] Message after placeholder replacement:', message);
-        
-        // Get target account's latest post
-        console.log('[DEBUG] Fetching latest post for account:', paymentData.to);
-        const client = new dhive.Client(config.hiveNodes || ['https://api.hive.blog']);
-        const discussions = await client.database.getDiscussions('blog', {
-            tag: paymentData.to,
-            limit: 1
-        });
-        console.log('[DEBUG] Fetched discussions:', discussions);
-        if (discussions.length === 0) {
-            hideLoading();
-            isProcessing = false;
-            document.getElementById('postSnapBtn').disabled = false;
-            showStatus('No posts found for target account.', 'error');
-            console.log('[DEBUG] postSnap aborted: no posts found for target account');
-            return;
-        }
-        const targetPost = discussions[0];
-        console.log('[DEBUG] Target post:', targetPost);
-        
-        // Create comment data
+
+        // Use config for parent_author and parent_permlink
         const commentData = {
-            parent_author: targetPost.author,
-            parent_permlink: targetPost.permlink,
+            parent_author: config.targetAccount || paymentData.to,
+            parent_permlink: config.parentPermlink || 'payandsnap',
             author: currentUser,
             permlink: `pay-n-snap-${Date.now()}`,
             title: '',
@@ -526,7 +504,7 @@ async function postSnap() {
                 extensions: []
             }
         };
-        
+
         // Add beneficiaries if configured
         if (config.beneficiaries && config.beneficiaries.length > 0) {
             commentData.comment_options.extensions.push([
@@ -535,9 +513,8 @@ async function postSnap() {
                 }
             ]);
         }
-        
+
         // Post comment through Keychain
-        console.log('[DEBUG] Sending post via Hive Keychain:', commentData);
         window.hive_keychain.requestPost(
             currentUser,
             commentData.title,
@@ -548,7 +525,6 @@ async function postSnap() {
             commentData.permlink,
             '',
             (response) => {
-                console.log('[DEBUG] Keychain post response:', response);
                 hideLoading();
                 isProcessing = false;
                 document.getElementById('postSnapBtn').disabled = false;
@@ -561,12 +537,11 @@ async function postSnap() {
                 }
             }
         );
-        
+
     } catch (error) {
         hideLoading();
         isProcessing = false;
         document.getElementById('postSnapBtn').disabled = false;
-        console.error('Snap posting error:', error);
         showStatus('Failed to post snap. Please try again.', 'error');
     }
 }
