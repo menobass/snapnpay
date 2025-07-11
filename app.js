@@ -567,15 +567,54 @@ async function postSnap() {
             commentData.json_metadata,
             commentData.permlink,
             '',
-            (response) => {
-                hideLoading();
-                isProcessing = false;
-                document.getElementById('postSnapBtn').disabled = false;
+            async (response) => {
                 if (response.success) {
-                    showStatus('Snap posted successfully!', 'success');
-                    // Reset the form
-                    resetForm();
+                    // After successful post, broadcast comment_options for beneficiaries
+                    if (config.beneficiaries && config.beneficiaries.length > 0) {
+                        const commentOptionsOp = [
+                            "comment_options",
+                            {
+                                author: currentUser,
+                                permlink: commentData.permlink,
+                                max_accepted_payout: "1000000.000 HBD",
+                                percent_hbd: 10000,
+                                allow_votes: true,
+                                allow_curation_rewards: true,
+                                extensions: [
+                                    [0, { beneficiaries: config.beneficiaries }]
+                                ]
+                            }
+                        ];
+                        window.hive_keychain.requestCustomJson(
+                            currentUser,
+                            "comment_options",
+                            "Posting",
+                            JSON.stringify(commentOptionsOp),
+                            "Set beneficiaries",
+                            (beneficiaryResponse) => {
+                                hideLoading();
+                                isProcessing = false;
+                                document.getElementById('postSnapBtn').disabled = false;
+                                if (beneficiaryResponse.success) {
+                                    showStatus('Snap posted successfully with beneficiaries!', 'success');
+                                    resetForm();
+                                } else {
+                                    showStatus('Snap posted, but failed to set beneficiaries.', 'warning');
+                                    resetForm();
+                                }
+                            }
+                        );
+                    } else {
+                        hideLoading();
+                        isProcessing = false;
+                        document.getElementById('postSnapBtn').disabled = false;
+                        showStatus('Snap posted successfully!', 'success');
+                        resetForm();
+                    }
                 } else {
+                    hideLoading();
+                    isProcessing = false;
+                    document.getElementById('postSnapBtn').disabled = false;
                     showStatus(`Failed to post snap: ${response.message || 'Unknown error'}`, 'error');
                 }
             }
