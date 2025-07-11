@@ -557,10 +557,9 @@ async function postSnap() {
             ]);
         }
 
-        // Post comment using Keychain's requestBroadcast
-        window.hive_keychain.requestBroadcast(
-            'comment',
-            {
+        // Post comment and comment_options together using Keychain's requestBroadcast
+        const operations = [
+            ["comment", {
                 parent_author: latestPostAuthor,
                 parent_permlink: latestPostPermlink,
                 author: currentUser,
@@ -568,50 +567,40 @@ async function postSnap() {
                 title: '',
                 body: message,
                 json_metadata: commentData.json_metadata
-            },
+            }]
+        ];
+        // Add comment_options if beneficiaries are configured
+        if (config.beneficiaries && config.beneficiaries.length > 0) {
+            operations.push([
+                "comment_options",
+                {
+                    author: currentUser,
+                    permlink: commentData.permlink,
+                    max_accepted_payout: "1000000.000 HBD",
+                    percent_hbd: 10000,
+                    allow_votes: true,
+                    allow_curation_rewards: true,
+                    extensions: [
+                        [0, { beneficiaries: config.beneficiaries }]
+                    ]
+                }
+            ]);
+        }
+        window.hive_keychain.requestBroadcast(
+            operations,
             'posting',
             function(response) {
+                hideLoading();
+                isProcessing = false;
+                document.getElementById('postSnapBtn').disabled = false;
                 if (response.success) {
-                    // After successful post, broadcast comment_options for beneficiaries
                     if (config.beneficiaries && config.beneficiaries.length > 0) {
-                        window.hive_keychain.requestBroadcast(
-                            'comment_options',
-                            {
-                                author: currentUser,
-                                permlink: commentData.permlink,
-                                max_accepted_payout: "1000000.000 HBD",
-                                percent_hbd: 10000,
-                                allow_votes: true,
-                                allow_curation_rewards: true,
-                                extensions: [
-                                    [0, { beneficiaries: config.beneficiaries }]
-                                ]
-                            },
-                            'posting',
-                            function(beneficiaryResponse) {
-                                hideLoading();
-                                isProcessing = false;
-                                document.getElementById('postSnapBtn').disabled = false;
-                                if (beneficiaryResponse.success) {
-                                    showStatus('Snap posted successfully with beneficiaries!', 'success');
-                                    resetForm();
-                                } else {
-                                    showStatus('Snap posted, but failed to set beneficiaries.', 'warning');
-                                    resetForm();
-                                }
-                            }
-                        );
+                        showStatus('Snap posted successfully with beneficiaries!', 'success');
                     } else {
-                        hideLoading();
-                        isProcessing = false;
-                        document.getElementById('postSnapBtn').disabled = false;
                         showStatus('Snap posted successfully!', 'success');
-                        resetForm();
                     }
+                    resetForm();
                 } else {
-                    hideLoading();
-                    isProcessing = false;
-                    document.getElementById('postSnapBtn').disabled = false;
                     showStatus(`Failed to post snap: ${response.message || 'Unknown error'}`, 'error');
                 }
             }
