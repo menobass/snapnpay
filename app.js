@@ -6,6 +6,8 @@ function formatHiveAmount(amount) {
 }
 // App configuration and state
 let config = {};
+let latestPostAuthor = null;
+let latestPostPermlink = null;
 let currentUser = null;
 let currentStream = null;
 let scanningInterval = null;
@@ -31,9 +33,43 @@ async function loadConfig() {
         }
         config = await response.json();
         console.log('Configuration loaded:', config);
+        // Fetch latest post for target account after config loads
+        if (config.targetAccount) {
+            await fetchLatestPost(config.targetAccount);
+        }
     } catch (error) {
         console.error('Error loading config:', error);
         showStatus('Error loading configuration. Please refresh the page.', 'error');
+    }
+}
+
+// Fetch latest post for a Hive account
+async function fetchLatestPost(account) {
+    try {
+        const response = await fetch('https://api.hive.blog', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                jsonrpc: '2.0',
+                method: 'condenser_api.get_discussions_by_blog',
+                params: [{ tag: account, limit: 1 }],
+                id: 1
+            })
+        });
+        const data = await response.json();
+        if (data.result && data.result.length > 0) {
+            latestPostAuthor = data.result[0].author;
+            latestPostPermlink = data.result[0].permlink;
+            console.log('Latest post:', latestPostAuthor, latestPostPermlink);
+        } else {
+            latestPostAuthor = null;
+            latestPostPermlink = null;
+            console.warn('No posts found for account:', account);
+        }
+    } catch (error) {
+        latestPostAuthor = null;
+        latestPostPermlink = null;
+        console.error('Error fetching latest post:', error);
     }
 }
 
@@ -481,10 +517,17 @@ async function postSnap() {
         message = message.replace('{account}', paymentData.to);
         message = message.replace('{from}', currentUser);
 
-        // Use config for parent_author and parent_permlink
+        // Use latest post for parent_author and parent_permlink
+        if (!latestPostAuthor || !latestPostPermlink) {
+            hideLoading();
+            isProcessing = false;
+            document.getElementById('postSnapBtn').disabled = false;
+            showStatus('No valid post found to reply to. Please try again later.', 'error');
+            return;
+        }
         const commentData = {
-            parent_author: config.targetAccount || paymentData.to,
-            parent_permlink: config.parentPermlink || 'payandsnap',
+            parent_author: latestPostAuthor,
+            parent_permlink: latestPostPermlink,
             author: currentUser,
             permlink: `pay-n-snap-${Date.now()}`,
             title: '',
