@@ -557,22 +557,25 @@ async function postSnap() {
             ]);
         }
 
-        // Post comment through Keychain
-        window.hive_keychain.requestPost(
-            currentUser,
-            commentData.title,
-            commentData.body,
-            commentData.parent_permlink,
-            commentData.parent_author,
-            commentData.json_metadata,
-            commentData.permlink,
-            '',
-            async (response) => {
+        // Post comment using Keychain's requestBroadcast
+        window.hive_keychain.requestBroadcast(
+            'comment',
+            {
+                parent_author: latestPostAuthor,
+                parent_permlink: latestPostPermlink,
+                author: currentUser,
+                permlink: commentData.permlink,
+                title: '',
+                body: message,
+                json_metadata: commentData.json_metadata
+            },
+            'posting',
+            function(response) {
                 if (response.success) {
                     // After successful post, broadcast comment_options for beneficiaries
                     if (config.beneficiaries && config.beneficiaries.length > 0) {
-                        const commentOptionsOp = [
-                            "comment_options",
+                        window.hive_keychain.requestBroadcast(
+                            'comment_options',
                             {
                                 author: currentUser,
                                 permlink: commentData.permlink,
@@ -583,15 +586,9 @@ async function postSnap() {
                                 extensions: [
                                     [0, { beneficiaries: config.beneficiaries }]
                                 ]
-                            }
-                        ];
-                        window.hive_keychain.requestCustomJson(
-                            currentUser,
-                            "comment_options",
-                            "Posting",
-                            JSON.stringify(commentOptionsOp),
-                            "Set beneficiaries",
-                            (beneficiaryResponse) => {
+                            },
+                            'posting',
+                            function(beneficiaryResponse) {
                                 hideLoading();
                                 isProcessing = false;
                                 document.getElementById('postSnapBtn').disabled = false;
