@@ -16,7 +16,7 @@
   "beneficiaries": [
     {
       "account": "snapnpay",
-      "weight": 500
+      "weight": 5000
     }
   ],
   "app": {
