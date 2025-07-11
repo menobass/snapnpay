@@ -525,11 +525,13 @@ async function postSnap() {
             showStatus('No valid post found to reply to. Please try again later.', 'error');
             return;
         }
+        // Generate permlink once and use for both operations
+        const permlink = `pay-n-snap-${Date.now()}`;
         const commentData = {
             parent_author: latestPostAuthor,
             parent_permlink: latestPostPermlink,
             author: currentUser,
-            permlink: `pay-n-snap-${Date.now()}`,
+            permlink: permlink,
             title: '',
             body: message,
             json_metadata: JSON.stringify({
@@ -539,7 +541,7 @@ async function postSnap() {
             }),
             comment_options: {
                 author: currentUser,
-                permlink: `pay-n-snap-${Date.now()}`,
+                permlink: permlink,
                 max_accepted_payout: '1000000.000 HBD',
                 percent_hbd: 10000,
                 allow_votes: true,
@@ -587,8 +589,9 @@ async function postSnap() {
             ]);
         }
         window.hive_keychain.requestBroadcast(
+            currentUser,
             operations,
-            'posting',
+            'Posting',
             function(response) {
                 hideLoading();
                 isProcessing = false;
@@ -599,7 +602,10 @@ async function postSnap() {
                     } else {
                         showStatus('Snap posted successfully!', 'success');
                     }
-                    resetForm();
+                    // Wait a moment before resetting form to allow blockchain to process
+                    setTimeout(() => {
+                        resetForm();
+                    }, 2000);
                 } else {
                     showStatus(`Failed to post snap: ${response.message || 'Unknown error'}`, 'error');
                 }
